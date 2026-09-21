@@ -1,0 +1,335 @@
+{
+  "worldName": "Sanctuary",
+  "version": 2,
+  "startDate": { "day": 1, "hour": 6 },
+  "locations": [
+    {
+      "id": "puerto_grisal",
+      "name": "Grisal",
+      "type": "ciudad_portuaria",
+      "description": "Gran ciudad comercial junto al mar. El mayor mercado del mundo conocido.",
+      "governance": "consejo_mercantil",
+      "guardStrength": 0.6,
+      "safety": 0.8,
+      "resources": ["pescado", "sal"],
+      "workBonus": { "comerciante": 1.4, "mercader_de_ruta": 1.4 },
+      "institution": { "id": "gremio_aventureros_puerto", "name": "Gremio de Aventureros de Grisal", "type": "gremio_aventureros", "trains": ["explorador", "picaro"] },
+      "connections": [
+        { "to": "valdemarca", "hours": 6 },
+        { "to": "ribera_sauce", "hours": 3 },
+        { "to": "cruce_fangoso", "hours": 8 },
+        { "to": "praderas_vann", "hours": 5 }
+      ]
+    },
+    {
+      "id": "valdemarca",
+      "name": "Valdor",
+      "type": "capital",
+      "description": "Ciudad amurallada, sede del gobierno regional y su guardia.",
+      "governance": "corona",
+      "guardStrength": 0.85,
+      "safety": 0.9,
+      "resources": ["grano"],
+      "workBonus": { "erudito": 1.2, "archivista": 1.2 },
+      "institution": { "id": "academia_valdemarca", "name": "Academia de Valdor", "type": "academia", "trains": ["guerrero", "erudito"] },
+      "connections": [
+        { "to": "puerto_grisal", "hours": 6 },
+        { "to": "aldea_tejo", "hours": 4 },
+        { "to": "bosque_umbrio", "hours": 5 },
+        { "to": "colinas_rotas", "hours": 7 }
+      ]
+    },
+    {
+      "id": "aldea_tejo",
+      "name": "Tejor",
+      "type": "pueblo_agricola",
+      "description": "Pequeno pueblo agricola rodeado de campos de cultivo.",
+      "governance": "consejo_local",
+      "guardStrength": 0.4,
+      "safety": 0.85,
+      "resources": ["grano", "cuero"],
+      "workBonus": { "comerciante": 1.3, "mercader_de_ruta": 1.3 },
+      "institution": { "id": "mercado_tejo", "name": "Casa de Comercio de Tejor", "type": "gremio_mercantil", "trains": ["comerciante"] },
+      "connections": [
+        { "to": "valdemarca", "hours": 4 },
+        { "to": "bosque_umbrio", "hours": 2 },
+        { "to": "praderas_vann", "hours": 3 },
+        { "to": "cruce_fangoso", "hours": 5 }
+      ]
+    },
+    {
+      "id": "bosque_umbrio",
+      "name": "Duren",
+      "type": "zona_salvaje",
+      "description": "Bosque denso con lobos y recursos de madera y hierbas.",
+      "governance": "ninguna",
+      "guardStrength": 0,
+      "safety": 0.4,
+      "resources": ["madera", "hierbas_medicinales"],
+      "workBonus": { "explorador": 1.3, "guia_expedicion": 1.3 },
+      "monsterFamily": "lobo",
+      "connections": [
+        { "to": "aldea_tejo", "hours": 2 },
+        { "to": "valdemarca", "hours": 5 },
+        { "to": "ribera_sauce", "hours": 3 }
+      ]
+    },
+    {
+      "id": "ribera_sauce",
+      "name": "Veldris",
+      "type": "pueblo_pesquero",
+      "description": "Pueblo pesquero junto a un ancho rio.",
+      "governance": "consejo_local",
+      "guardStrength": 0.45,
+      "safety": 0.75,
+      "resources": ["pescado", "madera"],
+      "workBonus": { "curandero": 1.4, "sanador_mayor": 1.4 },
+      "institution": { "id": "templo_sauce", "name": "Templo de Veldris", "type": "templo", "trains": ["curandero"] },
+      "connections": [
+        { "to": "puerto_grisal", "hours": 3 },
+        { "to": "bosque_umbrio", "hours": 3 },
+        { "to": "praderas_vann", "hours": 4 }
+      ]
+    },
+    {
+      "id": "praderas_vann",
+      "name": "Vannur",
+      "type": "pueblo_ganadero",
+      "description": "Llanuras abiertas de pastoreo entre el puerto, el pueblo agricola y el rio. Curten cuero y esquilan lana para medio continente.",
+      "governance": "consejo_ganadero",
+      "guardStrength": 0.35,
+      "safety": 0.7,
+      "resources": ["cuero", "lana"],
+      "connections": [
+        { "to": "puerto_grisal", "hours": 5 },
+        { "to": "aldea_tejo", "hours": 3 },
+        { "to": "ribera_sauce", "hours": 4 }
+      ]
+    },
+    {
+      "id": "cruce_fangoso",
+      "name": "Brynn",
+      "type": "pueblo_minero",
+      "description": "Pueblo fronterizo de mineros, polvoriento y proclive a disputas.",
+      "governance": "gremio_minero",
+      "guardStrength": 0.3,
+      "safety": 0.5,
+      "resources": ["mineral_hierro", "piedra"],
+      "workBonus": { "herrero": 1.5, "maestro_artesano": 1.5 },
+      "monsterFamily": "bandido",
+      "institution": { "id": "forja_fangoso", "name": "Forja de Brynn", "type": "herreria", "trains": ["herrero"], "repairs": true },
+      "connections": [
+        { "to": "puerto_grisal", "hours": 8 },
+        { "to": "colinas_rotas", "hours": 3 },
+        { "to": "aldea_tejo", "hours": 5 },
+        { "to": "ruinas_kaltenhor", "hours": 7 }
+      ]
+    },
+    {
+      "id": "colinas_rotas",
+      "name": "Morvane",
+      "type": "zona_salvaje_montañosa",
+      "description": "Colinas escarpadas ricas en mineral pero infestadas de troles.",
+      "governance": "ninguna",
+      "guardStrength": 0,
+      "safety": 0.25,
+      "resources": ["mineral_hierro", "piedra"],
+      "monsterFamily": "trol",
+      "connections": [
+        { "to": "cruce_fangoso", "hours": 3 },
+        { "to": "valdemarca", "hours": 7 },
+        { "to": "ruinas_kaltenhor", "hours": 5 }
+      ]
+    },
+    {
+      "id": "ruinas_kaltenhor",
+      "name": "Kestal",
+      "type": "ruinas",
+      "description": "Restos de una ciudad antigua, sin ley ni gobierno. Rumores de tesoros y peligros.",
+      "governance": "ninguna",
+      "guardStrength": 0,
+      "safety": 0.1,
+      "resources": ["reliquias"],
+      "monsterFamily": "espectro",
+      "connections": [
+        { "to": "colinas_rotas", "hours": 5 },
+        { "to": "cruce_fangoso", "hours": 7 }
+      ]
+    }
+  ],
+
+  "jobs": [
+    { "id": "novato", "name": "Novato", "tier": 0, "from": null, "combatBase": 3, "traits_bias": {} },
+
+    { "id": "guerrero", "name": "Guerrero", "tier": 1, "from": "novato", "combatBase": 8,
+      "traits_bias": { "riskTolerance": 0.6, "ambition": 0.5 },
+      "requirement": { "novatoLevel": 4 },
+      "trial": { "type": "kill_count", "monsterFamily": "any", "rank": "comun", "count": 6 },
+      "perJobLevel": { "combatPower": 1.4 } },
+    { "id": "explorador", "name": "Explorador", "tier": 1, "from": "novato", "combatBase": 5,
+      "traits_bias": { "riskTolerance": 0.7, "sociability": 0.4 },
+      "requirement": { "novatoLevel": 4 },
+      "trial": { "type": "visit_count", "count": 4 },
+      "perJobLevel": { "combatPower": 0.6, "gatherBonus": 0.08 } },
+    { "id": "herrero", "name": "Herrero", "tier": 1, "from": "novato", "combatBase": 3,
+      "traits_bias": { "ambition": 0.4, "greed": 0.5 },
+      "requirement": { "novatoLevel": 3 },
+      "trial": { "type": "craft_count", "count": 3 },
+      "perJobLevel": { "repairDiscount": 0.03, "craftBonus": 0.02 } },
+    { "id": "comerciante", "name": "Comerciante", "tier": 1, "from": "novato", "combatBase": 2,
+      "traits_bias": { "greed": 0.6, "sociability": 0.6 },
+      "requirement": { "novatoLevel": 3 },
+      "trial": { "type": "trade_count", "count": 10 },
+      "perJobLevel": { "marketImpactReduction": 0.02, "taxDiscount": 0.015 } },
+    { "id": "curandero", "name": "Curandero", "tier": 1, "from": "novato", "combatBase": 2,
+      "traits_bias": { "empathy": 0.7 },
+      "requirement": { "novatoLevel": 3 },
+      "trial": { "type": "heal_count", "count": 3 },
+      "perJobLevel": { "healBonus": 0.06 } },
+    { "id": "picaro", "name": "Picaro", "tier": 1, "from": "novato", "combatBase": 4,
+      "traits_bias": { "riskTolerance": 0.7, "greed": 0.5, "empathy": 0.3 },
+      "requirement": { "novatoLevel": 4 },
+      "trial": { "type": "steal_success_count", "count": 2 },
+      "perJobLevel": { "stealthBonus": 0.02 } },
+    { "id": "erudito", "name": "Erudito", "tier": 1, "from": "novato", "combatBase": 2,
+      "traits_bias": { "sociability": 0.5, "ambition": 0.4 },
+      "requirement": { "novatoLevel": 3 },
+      "trial": { "type": "knowledge_count", "count": 12 },
+      "perJobLevel": { "knowledgeCapBonus": 1.5, "rumorConfidenceBonus": 0.015 } },
+
+    { "id": "caballero", "name": "Caballero", "tier": 2, "from": "guerrero", "combatBase": 14,
+      "requirement": { "jobLevel": 8, "standingInstitution": "academia_valdemarca", "standingMin": 15 },
+      "trial": { "type": "defeat_rank", "rank": "elite", "count": 1 },
+      "perJobLevel": { "combatPower": 1.8 },
+      "unlockedAction": "defender_grupo" },
+    { "id": "guia_expedicion", "name": "Guia de Expedicion", "tier": 2, "from": "explorador",
+      "combatBase": 9,
+      "requirement": { "jobLevel": 8, "standingInstitution": "gremio_aventureros_puerto", "standingMin": 15 },
+      "trial": { "type": "visit_count", "count": 8 },
+      "perJobLevel": { "combatPower": 0.9, "gatherBonus": 0.12 },
+      "unlockedAction": null },
+    { "id": "maestro_artesano", "name": "Maestro Artesano", "tier": 2, "from": "herrero",
+      "combatBase": 4,
+      "requirement": { "jobLevel": 8, "standingInstitution": "forja_fangoso", "standingMin": 15 },
+      "trial": { "type": "craft_count", "count": 10 },
+      "perJobLevel": { "repairDiscount": 0.05, "craftBonus": 0.04 },
+      "unlockedAction": null },
+    { "id": "mercader_de_ruta", "name": "Mercader de Ruta", "tier": 2, "from": "comerciante",
+      "combatBase": 3,
+      "requirement": { "jobLevel": 8, "standingInstitution": "mercado_tejo", "standingMin": 15 },
+      "trial": { "type": "trade_count", "count": 30 },
+      "perJobLevel": { "marketImpactReduction": 0.03, "taxDiscount": 0.025 },
+      "unlockedAction": null },
+    { "id": "sanador_mayor", "name": "Sanador Mayor", "tier": 2, "from": "curandero",
+      "combatBase": 3,
+      "requirement": { "jobLevel": 8, "standingInstitution": "templo_sauce", "standingMin": 15 },
+      "trial": { "type": "heal_count", "count": 10 },
+      "perJobLevel": { "healBonus": 0.1 },
+      "unlockedAction": "curar_aliado" },
+    { "id": "asesino", "name": "Asesino", "tier": 2, "from": "picaro",
+      "combatBase": 10,
+      "requirement": { "jobLevel": 8, "standingInstitution": "gremio_aventureros_puerto", "standingMin": -10 },
+      "trial": { "type": "defeat_rank", "rank": "elite", "count": 2 },
+      "perJobLevel": { "stealthBonus": 0.035, "combatPower": 1.0 },
+      "unlockedAction": null },
+    { "id": "contrabandista", "name": "Contrabandista", "tier": 2, "from": "picaro",
+      "combatBase": 4,
+      "requirement": { "jobLevel": 8, "standingInstitution": "mercado_tejo", "standingMin": -10 },
+      "trial": { "type": "trade_count", "count": 18 },
+      "perJobLevel": { "stealthBonus": 0.025, "taxDiscount": 0.03, "marketImpactReduction": 0.02 },
+      "unlockedAction": null },
+    { "id": "archivista", "name": "Archivista", "tier": 2, "from": "erudito",
+      "combatBase": 3,
+      "requirement": { "jobLevel": 8, "standingInstitution": "academia_valdemarca", "standingMin": 15 },
+      "trial": { "type": "knowledge_count", "count": 30 },
+      "perJobLevel": { "knowledgeCapBonus": 2.5, "rumorConfidenceBonus": 0.025 },
+      "unlockedAction": null }
+  ],
+
+  "goods": [
+    { "id": "grano", "name": "Grano", "basePrice": 2, "category": "materia_prima" },
+    { "id": "pescado", "name": "Pescado", "basePrice": 3, "category": "materia_prima" },
+    { "id": "madera", "name": "Madera", "basePrice": 3, "category": "materia_prima" },
+    { "id": "hierbas_medicinales", "name": "Hierbas medicinales", "basePrice": 5, "category": "materia_prima" },
+    { "id": "mineral_hierro", "name": "Mineral de hierro", "basePrice": 6, "category": "materia_prima" },
+    { "id": "piedra", "name": "Piedra", "basePrice": 2, "category": "materia_prima" },
+    { "id": "cuero", "name": "Cuero", "basePrice": 4, "category": "materia_prima" },
+    { "id": "sal", "name": "Sal", "basePrice": 3, "category": "materia_prima" },
+    { "id": "lana", "name": "Lana", "basePrice": 3, "category": "materia_prima" },
+    { "id": "reliquias", "name": "Reliquia antigua", "basePrice": 40, "category": "tesoro" },
+    { "id": "colmillo_lobo", "name": "Colmillo de lobo", "basePrice": 8, "category": "material_raro" },
+    { "id": "insignia_bandido", "name": "Insignia de bandido", "basePrice": 12, "category": "material_raro" },
+    { "id": "nucleo_trol", "name": "Nucleo de trol", "basePrice": 22, "category": "material_raro" },
+    { "id": "polvo_espectral", "name": "Polvo espectral", "basePrice": 35, "category": "material_raro" },
+    { "id": "arma_hierro", "name": "Arma de hierro", "basePrice": 25, "category": "equipo_arma", "craftedFrom": { "mineral_hierro": 3 }, "durability": 120, "combatPowerBonus": 4 },
+    { "id": "armadura_cuero", "name": "Armadura de cuero", "basePrice": 20, "category": "equipo_armadura", "craftedFrom": { "cuero": 3 }, "durability": 120, "damageReduction": 0.15 },
+    { "id": "herramienta_recoleccion", "name": "Herramienta de recoleccion", "basePrice": 18, "category": "equipo_herramienta", "craftedFrom": { "madera": 2, "piedra": 1 }, "durability": 100, "gatherBonus": 0.25 },
+    { "id": "pocion_curativa", "name": "Pocion curativa", "basePrice": 10, "category": "consumible", "craftedFrom": { "hierbas_medicinales": 2 }, "healAmount": 35 },
+    { "id": "racion_comida", "name": "Racion de comida", "basePrice": 2, "category": "consumible", "craftedFrom": { "grano": 1, "pescado": 1 } }
+  ],
+
+  "monsters": {
+    "lobo": {
+      "comun": { "name": "Lobo salvaje", "power": 5, "danger": "bajo", "goldMin": 1, "goldMax": 3,
+        "loot": [ { "item": "cuero", "rarity": "comun", "p": 0.5, "qty": 1 }, { "item": "colmillo_lobo", "rarity": "infrecuente", "p": 0.18, "qty": 1 } ] },
+      "elite": { "name": "Lobo alfa", "power": 13, "danger": "medio", "goldMin": 4, "goldMax": 10,
+        "loot": [ { "item": "cuero", "rarity": "comun", "p": 0.7, "qty": 2 }, { "item": "colmillo_lobo", "rarity": "infrecuente", "p": 0.45, "qty": 2 }, { "item": "reliquias", "rarity": "raro", "p": 0.04, "qty": 1 } ],
+        "partyRecommended": false, "minBaseLevel": 4 },
+      "jefe": { "name": "Aullador Ancestral", "power": 34, "danger": "muy_alto", "goldMin": 25, "goldMax": 60,
+        "loot": [ { "item": "colmillo_lobo", "rarity": "infrecuente", "p": 0.9, "qty": 3 }, { "item": "reliquias", "rarity": "raro", "p": 0.3, "qty": 1 }, { "item": "polvo_espectral", "rarity": "muy_raro", "p": 0.06, "qty": 1 } ],
+        "partyRecommended": true, "minBaseLevel": 10 }
+    },
+    "bandido": {
+      "comun": { "name": "Bandido", "power": 7, "danger": "medio", "goldMin": 3, "goldMax": 8,
+        "loot": [ { "item": "mineral_hierro", "rarity": "comun", "p": 0.45, "qty": 1 }, { "item": "insignia_bandido", "rarity": "infrecuente", "p": 0.15, "qty": 1 } ], "stealsFromLoser": true },
+      "elite": { "name": "Capitan bandido", "power": 17, "danger": "alto", "goldMin": 8, "goldMax": 20,
+        "loot": [ { "item": "mineral_hierro", "rarity": "comun", "p": 0.6, "qty": 2 }, { "item": "insignia_bandido", "rarity": "infrecuente", "p": 0.4, "qty": 2 }, { "item": "reliquias", "rarity": "raro", "p": 0.05, "qty": 1 } ],
+        "partyRecommended": false, "minBaseLevel": 6, "stealsFromLoser": true },
+      "jefe": { "name": "Señor del Camino", "power": 40, "danger": "muy_alto", "goldMin": 30, "goldMax": 70,
+        "loot": [ { "item": "insignia_bandido", "rarity": "infrecuente", "p": 0.9, "qty": 3 }, { "item": "reliquias", "rarity": "raro", "p": 0.35, "qty": 1 }, { "item": "polvo_espectral", "rarity": "muy_raro", "p": 0.07, "qty": 1 } ],
+        "partyRecommended": true, "minBaseLevel": 11 }
+    },
+    "trol": {
+      "comun": { "name": "Trol de colina", "power": 12, "danger": "alto", "goldMin": 5, "goldMax": 15,
+        "loot": [ { "item": "piedra", "rarity": "comun", "p": 0.5, "qty": 2 }, { "item": "nucleo_trol", "rarity": "infrecuente", "p": 0.12, "qty": 1 } ] },
+      "elite": { "name": "Trol ancestral", "power": 24, "danger": "muy_alto", "goldMin": 12, "goldMax": 28,
+        "loot": [ { "item": "nucleo_trol", "rarity": "infrecuente", "p": 0.4, "qty": 2 }, { "item": "reliquias", "rarity": "raro", "p": 0.06, "qty": 1 } ],
+        "partyRecommended": true, "minBaseLevel": 8 },
+      "jefe": { "name": "Madre Trol", "power": 50, "danger": "extremo", "goldMin": 40, "goldMax": 90,
+        "loot": [ { "item": "nucleo_trol", "rarity": "infrecuente", "p": 0.9, "qty": 3 }, { "item": "reliquias", "rarity": "raro", "p": 0.4, "qty": 1 }, { "item": "polvo_espectral", "rarity": "muy_raro", "p": 0.1, "qty": 1 } ],
+        "partyRecommended": true, "minBaseLevel": 13 }
+    },
+    "espectro": {
+      "comun": { "name": "Espectro de las ruinas", "power": 16, "danger": "muy_alto", "goldMin": 10, "goldMax": 30,
+        "loot": [ { "item": "reliquias", "rarity": "raro", "p": 0.15, "qty": 1 }, { "item": "polvo_espectral", "rarity": "muy_raro", "p": 0.08, "qty": 1 } ] },
+      "elite": { "name": "Espectro mayor", "power": 30, "danger": "extremo", "goldMin": 20, "goldMax": 50,
+        "loot": [ { "item": "reliquias", "rarity": "raro", "p": 0.3, "qty": 1 }, { "item": "polvo_espectral", "rarity": "muy_raro", "p": 0.15, "qty": 1 } ],
+        "partyRecommended": true, "minBaseLevel": 10 },
+      "jefe": { "name": "Guardian de Kestal", "power": 65, "danger": "extremo", "goldMin": 60, "goldMax": 140,
+        "loot": [ { "item": "reliquias", "rarity": "raro", "p": 0.6, "qty": 2 }, { "item": "polvo_espectral", "rarity": "muy_raro", "p": 0.25, "qty": 2 } ],
+        "partyRecommended": true, "minBaseLevel": 14 }
+    }
+  },
+
+  "opportunityTemplates": {
+    "transporte": { "rewardPerHour": 3, "baseReward": 8, "deadlineSlack": 3 },
+    "caza": { "rewardMultiplier": 2.2, "deadlineSlack": 48 },
+    "entrega_material": { "rewardPerUnit": 4, "deadlineSlack": 40 }
+  },
+
+  "guildContractTemplates": {
+    "caza_gremial": { "rewardPerKill": 7, "reputationOnSuccess": 4, "reputationOnFailure": -4, "deadlineHours": 96, "countMin": 4, "countMax": 9 },
+    "recoleccion_gremial": { "rewardPerUnit": 3, "reputationOnSuccess": 3, "reputationOnFailure": -3, "deadlineHours": 96, "countMin": 6, "countMax": 16 },
+    "fabricacion_gremial": { "rewardPerUnit": 11, "reputationOnSuccess": 5, "reputationOnFailure": -4, "deadlineHours": 120, "countMin": 2, "countMax": 5 }
+  },
+
+  "guildWar": {
+    "intervalTicks": 720,
+    "declarationWindowTicks": 300,
+    "commitmentCost": 20,
+    "contestedLocations": ["cruce_fangoso", "colinas_rotas", "bosque_umbrio", "ribera_sauce", "praderas_vann"],
+    "bonusDurationTicks": 720,
+    "gatherBonus": 0.2,
+    "taxDiscount": 0.03
+  }
+}

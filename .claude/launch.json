@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sanctuary-dashboard",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["src/server/server.js"],
+      "port": 5177
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# Generated simulation state
+/data_runtime/
+/data_runtime_step5/
+
+# Node
+node_modules/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db

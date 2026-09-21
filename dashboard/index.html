@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sanctuary — Observatorio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="brand-mark">✦</span>
+      <div>
+        <h1>Sanctuary</h1>
+        <div class="brand-sub">observatorio del experimento — 70 agentes · 9 ciudades</div>
+      </div>
+    </div>
+    <div id="clock" class="clock">cargando...</div>
+    <div class="controls">
+      <button id="advance1" class="btn">+1 dia</button>
+      <button id="advance7" class="btn">+7 dias</button>
+      <label class="toggle"><input type="checkbox" id="autorefresh" checked /> auto</label>
+    </div>
+  </header>
+
+  <div class="stat-strip" id="statStrip"></div>
+  <div class="panel" id="llmPanel" style="margin:14px 22px 0"></div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="world">Mundo</button>
+    <button class="tab" data-tab="agents">Agentes</button>
+    <button class="tab" data-tab="guilds">Gremios</button>
+    <button class="tab" data-tab="quests">Encargos</button>
+    <button class="tab" data-tab="timeline">Linea de tiempo</button>
+  </nav>
+
+  <main>
+    <section id="pane-world" class="pane active">
+      <div class="grid grid-locations" id="locationGrid"></div>
+    </section>
+
+    <section id="pane-agents" class="pane">
+      <div class="agents-layout">
+        <div class="panel agent-roster">
+          <h2>Agentes <span class="count" id="agentCount"></span></h2>
+          <div class="filter-row">
+            <input id="agentSearch" placeholder="buscar por nombre o clase..." />
+          </div>
+          <div class="filter-row chip-row" id="classChips"></div>
+          <div id="agentList" class="agent-list"></div>
+        </div>
+        <div class="panel agent-detail" id="agentDetail">
+          <p class="hint">Selecciona un agente de la lista para ver su historia.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="pane-guilds" class="pane">
+      <div class="panel" id="warPanel" style="margin-bottom:14px"></div>
+      <div class="grid grid-guilds" id="guildGrid"></div>
+    </section>
+
+    <section id="pane-quests" class="pane">
+      <div class="grid grid-quests" id="questGrid"></div>
+    </section>
+
+    <section id="pane-timeline" class="pane">
+      <div class="panel timeline-panel">
+        <div class="filter-row">
+          <select id="timelineFilter">
+            <option value="">todos los eventos</option>
+            <option value="arrest">arrestos</option>
+            <option value="class_change">cambios de clase</option>
+            <option value="party_combat_win">victorias en grupo</option>
+            <option value="party_combat_loss">derrotas en grupo</option>
+            <option value="theft">robos</option>
+            <option value="guild_embezzle">malversaciones</option>
+            <option value="combat_win">combates ganados</option>
+            <option value="job_completed">encargos completados</option>
+          </select>
+        </div>
+        <div id="timelineList" class="timeline-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

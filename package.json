@@ -1,0 +1,18 @@
+{
+  "name": "sanctuary",
+  "version": "0.1.0",
+  "description": "Experimento 4 — un pequeno mundo persistente para agentes autonomos",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "sim": "node src/sim/run.js",
+    "server": "node src/server/server.js",
+    "reset": "node src/sim/reset.js",
+    "test:embezzle": "node src/engine/tests/embezzlement_friction.test.js",
+    "test:craft": "node src/engine/tests/craft_instance.test.js",
+    "test:maintenance": "node src/engine/tests/equipment_maintenance.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
