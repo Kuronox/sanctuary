@@ -2,7 +2,7 @@ import { makeRng } from "./rng.js";
 import * as economy from "./economy.js";
 import { decide, respondToPartyInvite } from "./decision.js";
 import { decide as decideLlm } from "./llm/llmDecision.js";
-import { execute, emit, locOf, resolvePartyFight } from "./actions.js";
+import { execute, emit, locOf, resolvePartyFight, handleDeath } from "./actions.js";
 import { addMemory } from "./knowledge.js";
 import { appendEvent, appendDecision } from "./store.js";
 import { buildAdjacency } from "./geo.js";
@@ -107,7 +107,7 @@ function decayNeeds(agent) {
   agent.needs.hunger = Math.min(1, agent.needs.hunger + 0.02);
   agent.needs.fatigue = Math.min(1, agent.needs.fatigue + 0.015);
   agent.needs.social = Math.min(1, agent.needs.social + 0.01);
-  if (agent.needs.hunger > 0.85) agent.stats.health = Math.max(1, agent.stats.health - 1);
+  if (agent.needs.hunger > 0.85) agent.stats.health -= 1; // Step 7: sin floor — el hambre puede matar de verdad
 }
 
 function decayHuntPressure(world) {
@@ -314,6 +314,13 @@ export async function tick(world) {
     decayStandings(agent);
     agent.stats.maxHealth = prog.maxHealthFor(agent);
     agent.stats.health = Math.min(agent.stats.health, agent.stats.maxHealth);
+
+    // Step 7: mismo corte que ya usa el combate (STEP 6) — un agente que
+    // murio de hambre este mismo tick no debe seguir hasta decide()/execute().
+    if (agent.stats.health <= 0) {
+      handleDeath(world, agent, { cause: "hambre", killer: null });
+      continue;
+    }
 
     if (agent.prison) {
       processPrison(world, agent);

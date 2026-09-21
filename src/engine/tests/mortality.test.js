@@ -6,7 +6,7 @@
 // T5. muerte de lider dispara sucesion y deja el guild consistente
 // T6. muerte del ultimo miembro disuelve el guild
 // T7. destino de renacimiento evita el lugar de muerte y, si hay alternativa, lugares donde ya murio
-// T8. STEP 6 no habilita muerte por hambre (decayNeeds intacto)
+// T8. STEP 7: el hambre sostenida sin poder comer mata (decayNeeds sin floor)
 
 import assert from "node:assert/strict";
 import path from "node:path";
@@ -203,20 +203,30 @@ function makeWorld(seed) {
   console.log(`T7 PASS: destinos ${["puerto_grisal", "aldea_tejo"].join(" -> ")} respetan las exclusiones`);
 }
 
-// ---- T8: STEP 6 no habilita muerte por hambre --------------------------------
+// ---- T8: STEP 7 — hambre sostenida mata --------------------------------------
 
 {
   const world = makeWorld(608);
   const agent = makeAgent("t8_a", "valdemarca");
-  agent.stats.health = 1;
-  agent.needs.hunger = 0.99;
+  agent.stats.health = 3;
   world.agents[agent.id] = agent;
 
-  for (let i = 0; i < 20; i++) await tick(world);
+  const livesBefore = agent.lives;
+  // Se fuerza hunger=1 antes de cada tick para aislar el mecanismo bajo prueba
+  // (el floor de decayNeeds) del comportamiento emergente de decision.js —
+  // sin esto, el agente podria comer y nunca llegar a niveles criticos.
+  let died = false;
+  for (let i = 0; i < 10 && !died; i++) {
+    agent.needs.hunger = 1;
+    await tick(world);
+    if (agent.deathHistory.length > 0) died = true;
+  }
 
-  assert.ok(agent.stats.health >= 1, `T8 FAIL: la salud bajo de 1 por hambre (${agent.stats.health}) — decayNeeds no deberia haberse tocado`);
-  assert.equal(agent.alive, true, "T8 FAIL: el agente murio (STEP 6 es mortalidad solo por combate)");
-  console.log(`T8 PASS: hambre no mata (health=${agent.stats.health}, alive=${agent.alive})`);
+  assert.ok(died, "T8 FAIL: el hambre sostenida no produjo ninguna muerte registrada");
+  assert.equal(agent.deathHistory[0].cause, "hambre", "T8 FAIL: la muerte no se registro con cause='hambre'");
+  assert.equal(agent.deathHistory[0].killer, null, "T8 FAIL: killer deberia ser null en una muerte por hambre");
+  assert.equal(agent.lives, livesBefore - 1, "T8 FAIL: lives no se decremento tras la muerte por hambre");
+  console.log(`T8 PASS: hambre sostenida mata (cause=${agent.deathHistory[0].cause}, killer=${agent.deathHistory[0].killer}, lives ${livesBefore} -> ${agent.lives})`);
 }
 
 console.log("\nTodos los tests de mortality (Step 6) pasaron.");
