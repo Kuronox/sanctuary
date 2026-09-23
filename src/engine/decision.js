@@ -84,6 +84,28 @@ function destinationBonus(world, agent, toLocationId) {
   return { bonus, reasons };
 }
 
+// Señal de peligro acumulada desde knowledge entries de muerte/derrota en
+// el destino candidato dentro de la ventana de 168 ticks. Devuelve [0, 0.6].
+// "rebirth" señala el lugar de la muerte (data.fromLocation), no el de
+// renacimiento; "combat_loss" y "permanent_death" usan data.location.
+export function dangerPenalty(agent, candidate, world) {
+  if (!agent.knowledge?.length) return 0;
+  const DANGER_WINDOW = 168;
+  let signal = 0;
+  for (const k of agent.knowledge) {
+    let dangerLocation;
+    if (k.type === "rebirth") dangerLocation = k.data?.fromLocation;
+    else if (k.type === "permanent_death" || k.type === "combat_loss") dangerLocation = k.data?.location;
+    else continue;
+    if (dangerLocation !== candidate) continue;
+    const age = world.time.tick - k.tick;
+    if (age > DANGER_WINDOW) continue;
+    signal += k.confidence * (1 - age / DANGER_WINDOW);
+  }
+  // ponytail: ~2.4 entries frescos saturan al cap; revisar multiplier si la tasa de muerte cambia
+  return Math.min(0.6, signal * 0.25 * (1 - agent.personality.riskTolerance));
+}
+
 // Bono de utilidad para acciones que efectivamente avanzan la prueba de
 // clase EN CURSO del agente. Sin esto, "iniciar_prueba_clase" puntua alto
 // por ambicion pero luego nada empuja a craftear/cazar/curar/comerciar/
@@ -155,6 +177,7 @@ function scoreAction(world, agent, action) {
   const p = agent.personality;
   let score = trialBonus(world, agent, action);
   const reasons = [];
+  let _cfBonusDp = 0; // Step 9.5: offset contrafactual para travel con penalizacion activa
   if (score > 0) reasons.push("avanza la prueba de clase en curso");
   const gcBonus = guildContractBonus(world, agent, action);
   if (gcBonus) { score += gcBonus; reasons.push(gcBonus > 0 ? "avanza el encargo de gremio en curso" : "el gremio necesita esto, mejor no venderlo"); }
@@ -184,11 +207,18 @@ function scoreAction(world, agent, action) {
       break;
     case "travel": {
       const { bonus, reasons: destReasons } = destinationBonus(world, agent, action.data.to);
+      const dp = dangerPenalty(agent, action.data.to, world);
       score += goalWeight(agent, "exploracion") * 1.2;
       score += p.riskTolerance * 0.4;
       score -= agent.needs.fatigue * 1.5;
       score -= 0.3;
-      score += bonus;
+      score += bonus * (1 - dp);
+      if (dp > 0) {
+        reasons.push(`penalizacion por peligro conocido en ${action.data.to} (−${Math.round(dp * 100)}%)`);
+        // Step 9.5: cfScore = finalScore + _cfBonusDp (lo que habria puntuado sin penalizacion)
+        // El ruido RNG se añade despues y se comparte entre score real y contrafactual.
+        _cfBonusDp = bonus * dp;
+      }
       reasons.push(...(destReasons.length ? destReasons : ["disposicion general a viajar/explorar"]));
       break;
     }
@@ -473,7 +503,7 @@ function scoreAction(world, agent, action) {
   }
 
   score += (world.rng() - 0.5) * 0.6;
-  return { action, score, reasons };
+  return { action, score, reasons, _cfBonusDp };
 }
 
 export function decide(world, agent) {
@@ -488,6 +518,28 @@ export function decide(world, agent) {
   if (scored.length > 1 && world.rng() < 0.08) chosen = scored[1];
 
   const rationale = buildRationale(world, agent, scored, chosen);
+
+  // Step 9.5: contrafactual inline — solo cuando algun candidato travel tiene penalizacion activa.
+  // cfScore = score + _cfBonusDp (offset puro, sin RNG adicional ni segunda simulacion).
+  // El ganador contrafactual se determina por max cfScore sin shuffle (limitacion documentada:
+  // el 8% shuffle puede generar falsos Tipo A cuando chosen=scored[1] por azar).
+  const cfPenalized = scored.filter((s) => s._cfBonusDp > 0);
+  if (cfPenalized.length > 0) {
+    let cfWinner = scored[0];
+    for (const s of scored) {
+      if (s.score + s._cfBonusDp > cfWinner.score + cfWinner._cfBonusDp) cfWinner = s;
+    }
+    const cfType = cfWinner === chosen ? "B" : "A";
+    rationale.cf = {
+      cfType,
+      penaltyApplied: cfPenalized.reduce((m, s) => Math.max(m, s._cfBonusDp), 0),
+      realWinner: { type: chosen.action.type, to: chosen.action.data?.to || null, score: Math.round(chosen.score * 100) / 100 },
+      cfWinner: cfType === "A"
+        ? { type: cfWinner.action.type, to: cfWinner.action.data?.to || null, cfScore: Math.round((cfWinner.score + cfWinner._cfBonusDp) * 100) / 100 }
+        : null,
+    };
+  }
+
   return { action: chosen.action, rationale };
 }
 

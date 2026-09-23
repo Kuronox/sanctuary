@@ -18,7 +18,13 @@ Antes de tocar nada, confirmá que tenés estos elementos explícitos. Si falta 
 - Intervención propuesta (el diseño concreto).
 - Archivos permitidos.
 - Archivos prohibidos.
-- Criterios de éxito — como *observables*, nunca como cifras objetivo ("debe haber X muertes" no es un criterio válido; "observar cuántas muertes ocurren y dónde" sí).
+- Criterios de éxito — como *observables*, nunca como cifras objetivo ("debe haber X muertes" no es un criterio válido; "observar cuántas muertes ocurren y dónde" sí). Cada criterio necesita, explícito:
+  - descripción,
+  - prioridad: `critical` (si no puede observarse, invalida la capacidad de responder la hipótesis) o `secondary` (si no puede observarse, el Step sigue siendo evaluable igual),
+  - dato esperado que lo respondería,
+  - comparación o umbral, si corresponde.
+
+  No hace falta un formato literal para esto — alcanza con que esos cuatro elementos queden explícitos por cada criterio.
 - Seed de referencia para la simulación.
 - Duración de la simulación.
 - Métricas relevantes a instrumentar.
@@ -34,6 +40,35 @@ Con el diseño en mano, y ANTES de escribir código:
 - Identificá explícitamente qué NO debe cambiar.
 
 Si en esta fase encontrás que el diseño tiene un problema real (un loop no considerado, una premisa que el código ya contradice, un archivo permitido que no alcanza para lo que se pide), decilo y esperá confirmación antes de seguir — no lo arregles vos por tu cuenta ni sigas adelante asumiendo que está bien.
+
+### Observability Audit
+
+Antes de implementar, para **cada criterio de éxito de Fase A** (no solo los que "parecen" difíciles) verificá:
+
+1. Qué dato o conjunto de datos respondería el criterio.
+2. Dónde se almacena ese dato hoy (o dónde se almacenaría con la intervención propuesta).
+3. En qué momento temporal se captura.
+4. Si esa captura ocurre exactamente en el momento que el criterio necesita.
+5. Si el dato permite distinguir estado previo, evento y consecuencia — no solo un snapshot ambiguo.
+6. Si responde el criterio directamente, o solo por proxy.
+7. Si esa información sobrevive a la simulación y queda disponible para el análisis de Fase F.
+8. Si alcanza para comparar contra el baseline del Step anterior.
+
+Clasificá cada criterio como:
+
+- **`OBSERVABLE`**: la instrumentación existente captura la información necesaria, en el momento correcto, sin inferencias importantes.
+- **`PROXY_ONLY`**: hay información relacionada que aproxima el criterio pero no lo responde directamente — dejá explícito qué sí y qué no se puede concluir con ella.
+- **`NOT_OBSERVABLE`**: la información no se captura, se captura en el momento equivocado, o se pierde antes del análisis.
+
+**Regla de parada**: si un criterio **`critical`** resulta `NOT_OBSERVABLE`, parate antes de implementar/simular y devolvé la decisión al usuario. Explicá: qué criterio no puede observarse, qué dato falta, dónde habría que capturarlo, por qué no se puede inferir de forma confiable, y qué opciones existen (eliminar/ajustar ese criterio, aceptar explícitamente un proxy, ampliar la instrumentación como parte de este Step, o posponerlo a otro Step). **No elijas vos cuál opción tomar.**
+
+Un criterio `secondary` en `NOT_OBSERVABLE` o `PROXY_ONLY` no frena nada — se marca así y el Step sigue, siempre que la hipótesis siga siendo evaluable con lo que queda. No sobrerreacciones: esto no es "cualquier métrica ausente detiene el experimento", es específicamente sobre los criterios que la propia Fase A marcó como `critical`.
+
+Dos principios metodológicos del protocolo (no reglas del mundo de SANCTUARY) que esta auditoría existe para hacer cumplir:
+
+> Una simulación no puede responder una pregunta que el sistema no instrumenta.
+
+> La ausencia de una observación no demuestra la ausencia del fenómeno.
 
 **No implementes todavía.**
 
@@ -75,6 +110,12 @@ Compará contra el baseline/Step anterior, separando explícitamente:
 - Anomalías (estado inconsistente, referencias rotas, agentes actuando fuera de su condición esperada, loops inesperados).
 - Cosas que quedan sin resolver.
 
+Separá además, por cada criterio de éxito de Fase A, según la clasificación de la Observability Audit:
+
+- **Direct observations**: lo que salió `OBSERVABLE` — datos que responden el criterio directamente.
+- **Proxy observations**: lo que salió `PROXY_ONLY` — dejá explícita la limitación cada vez que lo uses. Nunca lo presentes como si fuera una observación directa.
+- **Unanswered criteria**: lo que salió `NOT_OBSERVABLE` — nombralos, no los omitas del reporte.
+
 ## Fase G — Veredicto
 
 El resultado de la Fase F se resume en uno de estos cuatro, nunca forzado hacia "éxito":
@@ -83,6 +124,8 @@ El resultado de la Fase F se resume en uno de estos cuatro, nunca forzado hacia 
 - **HIPÓTESIS NO APOYADA**
 - **RESULTADO MIXTO**
 - **RESULTADO INCONCLUSO**
+
+Si algún criterio **`critical`** quedó `NOT_OBSERVABLE` (y llegaste hasta acá porque en Fase B se decidió aceptar esa limitación en vez de frenar), **no podés declarar HIPÓTESIS APOYADA ni HIPÓTESIS NO APOYADA** — la evidencia que faltaría para sostener cualquiera de las dos es justamente la que no se pudo observar. Usá **RESULTADO INCONCLUSO**, o si parte de la hipótesis sí se pudo evaluar con los criterios que quedaron `OBSERVABLE`, **HIPÓTESIS PARCIALMENTE EVALUADA** (aclarando qué parte sí y qué parte no).
 
 ## Fase H — Reporte
 

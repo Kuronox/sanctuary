@@ -10,14 +10,17 @@ import { selectLlmCohort } from "../engine/llm/cohort.js";
 import * as llmBudget from "../engine/llm/budget.js";
 import { hasApiKey } from "../engine/llm/deepseekClient.js";
 
-const SEED_LABEL = "sanctuary-v2";
+// Step 8: label de seed opcional por CLI (node src/sim/run.js <ticks> <seedLabel>),
+// "sanctuary-v2" como default — sin esto, correr una poblacion distinta para
+// comparar entre seeds exigia editar y revertir esta constante a mano.
+const SEED_LABEL = process.argv[3] || "sanctuary-v2";
 const LLM_COHORT_SIZE = 5;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const worldSeed = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../data/world_seed.json"), "utf-8"));
 
 const AGENT_COUNT = 70;
-const SEED = seedFromString("sanctuary-v2");
+const SEED = seedFromString(SEED_LABEL);
 
 function buildInitialWorld() {
   const world = createWorld(worldSeed, SEED);
