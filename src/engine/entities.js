@@ -123,6 +123,7 @@ export function createAgent({ id, name, flavorBiasDef, homeLocation, rng }) {
     createdTick: 0,
     policy: "deterministic", // "deterministic" | "llm" (Experimento V3-LLM) — decide que implementacion de decide() usa este agente
     lastLlmConsultTick: null, // ultimo tick en que se le hizo una consulta real al LLM (para espaciar llamadas, ver llm/llmDecision.js)
+    narrative: [], // Step 10: racionalizaciones post-decision Tipo A { tick, text, trigger } — nunca leido por el motor
   };
 }
 

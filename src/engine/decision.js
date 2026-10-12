@@ -106,6 +106,25 @@ export function dangerPenalty(agent, candidate, world) {
   return Math.min(0.6, signal * 0.25 * (1 - agent.personality.riskTolerance));
 }
 
+// Step 14: aprender de las derrotas. Cada derrota propia en solitario contra
+// este mismo monstruo (familia + rango) en los ultimos 7 dias resta puntos a
+// volver a pelearlo solo; el recuerdo se desvanece linealmente. Se lee de
+// agent.memory y no de agent.knowledge: en una ciudad poblada el knowledge
+// se renueva entero en ~9 horas y ningun agente conservaba ahi una derrota.
+// Un temerario aprende mas lento (mitad de peso con riskTolerance=1), pero
+// aprende: quienes mas repetian derrotas eran justamente los temerarios.
+const DEFEAT_WINDOW = 168;
+export function defeatPenalty(agent, family, rank, tick) {
+  let signal = 0;
+  for (const m of agent.memory) {
+    if (m.family !== family || m.rank !== rank || !m.tags?.includes("derrota")) continue;
+    const age = tick - m.tick;
+    if (age > DEFEAT_WINDOW) continue;
+    signal += 1 - age / DEFEAT_WINDOW;
+  }
+  return Math.min(4, signal * (1 - 0.5 * agent.personality.riskTolerance));
+}
+
 // Bono de utilidad para acciones que efectivamente avanzan la prueba de
 // clase EN CURSO del agente. Sin esto, "iniciar_prueba_clase" puntua alto
 // por ambicion pero luego nada empuja a craftear/cazar/curar/comerciar/
@@ -321,6 +340,11 @@ function scoreAction(world, agent, action) {
       score -= (1 - p.riskTolerance) * 1.5;
       if (def.partyRecommended) score -= 2.2; // mejor pedir ayuda que ir solo
       if (agent.stats.health < agent.stats.maxHealth * 0.4) score -= 3;
+      const learned = defeatPenalty(agent, action.data.family, action.data.rank, world.time.tick);
+      if (learned > 0) {
+        score -= learned;
+        reasons.push("recuerda derrotas recientes contra este mismo enemigo");
+      }
       reasons.push(`riesgo/beneficio de combate (${action.data.rank}) segun poder efectivo y tolerancia al riesgo`);
       break;
     }

@@ -34,6 +34,16 @@ function jobDefOf(world, agent) {
   return prog.jobDef(world.worldSeed, agent.progression.job.id);
 }
 
+// Step 12: "necesita ayuda" = tiene hambre, no lleva raciones y su oro no
+// alcanza para una comida en esta ciudad. Antes contaba cualquiera con poco
+// oro, y dos agentes empaticos se pasaban el mismo oro de ida y vuelta miles
+// de veces (entre 67% y 78% de los regalos eran devoluciones en menos de un dia).
+const HELP_HUNGER_MIN = 0.5;
+export function needsFoodHelp(world, other) {
+  if (other.needs.hunger <= HELP_HUNGER_MIN || (other.inventory.racion_comida || 0) > 0) return false;
+  return other.gold < economy.priceAt(world.worldSeed, world.markets, other.location, "racion_comida");
+}
+
 function agentsAt(world, locationId, excludeId) {
   return Object.values(world.agents).filter(
     (a) => a.alive && a.location === locationId && a.id !== excludeId && a.status !== "traveling"
@@ -265,7 +275,7 @@ function resolveSoloFight(world, agent, family, rank) {
     const goldLost = Math.min(agent.gold, randInt(world.rng, 0, 5));
     agent.gold -= goldLost;
     if (agent.stats.health <= 15) agent.status = "incapacitated";
-    addMemory(agent, { summary: `Fue derrotado por un ${def.name}`, importance: rank === "comun" ? 0.5 : 0.85, tags: ["combate", "derrota", rank] }, world.time.tick);
+    addMemory(agent, { summary: `Fue derrotado por un ${def.name}`, importance: rank === "comun" ? 0.5 : 0.85, tags: ["combate", "derrota", rank], family, rank }, world.time.tick); // Step 14: family/rank para poder recordar contra que perdio
     return emit(world, agent, "combat_loss", `${agent.name} es derrotado por un ${def.name} y pierde ${dmg} de salud.`, { family, rank, dmg, goldLost });
   }
 }
@@ -442,7 +452,10 @@ export function listCandidateActions(world, agent) {
   const others = agentsAt(world, agent.location, agent.id);
   for (const other of others.slice(0, 5)) {
     actions.push({ type: "talk", data: { targetId: other.id } });
-    if (agent.gold > 10 || Object.keys(agent.inventory).length) actions.push({ type: "help_agent", data: { targetId: other.id } });
+    // Step 12: regalar oro solo se ofrece ante una necesidad real del otro, y
+    // solo si quien regala tiene oro de verdad (antes bastaba con tener
+    // inventario, y un "regalo" de 0 de oro igual sumaba amistad).
+    if (agent.gold > 10 && needsFoodHelp(world, other)) actions.push({ type: "help_agent", data: { targetId: other.id } });
     actions.push({ type: "steal", data: { targetId: other.id } });
     if (other.stats.health < other.stats.maxHealth * 0.6) {
       actions.push({ type: "curar_aliado", data: { targetId: other.id } });
@@ -471,6 +484,10 @@ export function listCandidateActions(world, agent) {
       // 179 veces en 30 dias entre el mismo gremio).
       const leftRecently = agent.recentGuildDepartures[guild.id] && world.time.tick - agent.recentGuildDepartures[guild.id] < REJOIN_COOLDOWN_TICKS;
       if (leftRecently) continue;
+      // Step 13: el gremio recuerda a quien expulso por malversar y no lo
+      // readmite. Sin esto la expulsion no costaba nada: el mismo gremio
+      // volvia a aceptar al ladron con una espera mediana de 23 horas.
+      if (guild.bannedIds?.includes(agent.id)) continue;
       const leaderRel = agent.relationships[guild.leaderId];
       const knowsSomeoneHere = localsHere.some((a) => a.guildId === guild.id);
       const isKnownGuild = guild.reputation > 25;
@@ -789,11 +806,12 @@ const HANDLERS = {
     const target = world.agents[targetId];
     if (!target || !target.alive) return null;
     const amount = Math.min(agent.gold, randInt(world.rng, 3, 10));
+    const targetBefore = { targetGold: target.gold, targetHunger: target.needs.hunger }; // Step 12: para poder auditar a quien se ayuda
     agent.gold -= amount;
     target.gold += amount;
     adjustRelationship(agent, targetId, world.time.tick, { affinityDelta: 5, note: "ayudo", weight: 1.5 });
     adjustRelationship(target, agent.id, world.time.tick, { affinityDelta: 20, trustDelta: 15, note: `${agent.name} le ayudo con oro`, weight: 1.5 });
-    return emit(world, agent, "help", `${agent.name} ayuda a ${target.name} con ${amount} de oro.`, { targetId, amount });
+    return emit(world, agent, "help", `${agent.name} ayuda a ${target.name} con ${amount} de oro.`, { targetId, amount, ...targetBefore });
   },
 
   steal(world, agent, { targetId }) {
@@ -930,9 +948,10 @@ const HANDLERS = {
       }
       guilds.adjustGuildReputation(guild, -6, world.time.tick);
       guilds.expelMember(world, guild, agent, "fue descubierto malversando el tesoro");
+      (guild.bannedIds ??= []).push(agent.id); // Step 13: veto permanente en este gremio
       expelled = true;
     }
-    const ev = emit(world, agent, "guild_embezzle", `${agent.name} malversa ${amount} de oro del tesoro de ${guild.name}.${caught ? " Lo ven hacerlo y lo expulsan." : ""}`, { amount, caught, expelled });
+    const ev = emit(world, agent, "guild_embezzle", `${agent.name} malversa ${amount} de oro del tesoro de ${guild.name}.${caught ? " Lo ven hacerlo y lo expulsan." : ""}`, { amount, caught, expelled, guildId: guild.id });
     if (caught) {
       // Propagar el descubrimiento a TODOS los presentes (no solo miembros del gremio),
       // usando el sistema local existente. Los agentes del gremio ya recibieron la

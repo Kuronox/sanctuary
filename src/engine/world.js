@@ -2,6 +2,7 @@ import { makeRng } from "./rng.js";
 import * as economy from "./economy.js";
 import { decide, respondToPartyInvite } from "./decision.js";
 import { decide as decideLlm } from "./llm/llmDecision.js";
+import { narrateTypeA } from "./llm/narrator.js";
 import { execute, emit, locOf, resolvePartyFight, handleDeath } from "./actions.js";
 import { addMemory } from "./knowledge.js";
 import { appendEvent, appendDecision } from "./store.js";
@@ -14,6 +15,7 @@ import * as guilds from "./guilds.js";
 const HOURS_PER_DAY = 24;
 const GUILD_UPKEEP_EVERY_TICKS = 24;
 const GUILD_INSOLVENCY_LIMIT_TICKS = 240;
+const SAFE_CITY_SAFETY = 0.7; // Step 11: desde aqui una ciudad cuenta como segura para quedarse a recuperarse
 const EQUIPMENT_UPKEEP_EVERY_TICKS = 24; // 1 gold por slot equipado por dia
 
 export function createWorld(worldSeed, seedNumber) {
@@ -200,12 +202,25 @@ function survivalOverride(world, agent) {
   if (agent.stats.health < 25 && (agent.inventory.pocion_curativa || 0) > 0) {
     return { type: "use_potion" };
   }
+  // Step 11: comer va antes que huir. La salud baja por hambre disparaba la
+  // huida "a un lugar mas seguro" aunque hubiera comida en la ciudad, y el
+  // agente rebotaba entre dos ciudades seguras hasta morir sin comer.
+  const starving = agent.needs.hunger > 0.9;
+  if (starving && !noLocalFood) return { type: "eat" };
+  const weak = agent.stats.health < 20;
+  const safeHere = loc.safety >= SAFE_CITY_SAFETY;
   if (desperate && loc.connections.length) {
     const best = [...loc.connections].sort((a, b) => locOf(world, b.to).safety - locOf(world, a.to).safety)[0];
-    if (locOf(world, best.to).safety > loc.safety || noLocalFood) {
+    // Step 11: un agente debil solo huye de una ciudad peligrosa; la falta de
+    // comida solo lo mueve si de verdad tiene hambre.
+    const fleeDanger = weak && !safeHere && locOf(world, best.to).safety > loc.safety;
+    if (fleeDanger || (starving && noLocalFood)) {
       return { type: "travel", data: { to: best.to, hours: best.hours } };
     }
   }
+  // Step 11: debil en ciudad segura -> se queda a recuperarse (descansar es
+  // lo unico que devuelve salud sin oro ni pociones).
+  if (weak && safeHere) return { type: "rest" };
   if (agent.needs.fatigue > 0.92) return { type: "rest" };
   if (agent.needs.hunger > 0.9) return { type: "eat" };
   return null;
@@ -378,6 +393,8 @@ export async function tick(world) {
     agent.recentDecisions.push({ tick: world.time.tick, ...rationale });
     if (agent.recentDecisions.length > 20) agent.recentDecisions.shift();
     appendDecision({ agentId: agent.id, tick: world.time.tick, ...rationale });
+    // Step 10: await post-decision — el motor ya decidio; solo escribe en narrative[]
+    if (rationale.cf?.cfType === "A") await narrateTypeA(agent, { tick: world.time.tick, ...rationale }, world);
   }
 
   return world;
