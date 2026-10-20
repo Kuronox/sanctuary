@@ -4,6 +4,12 @@ Experimento 4: un pequeño mundo persistente donde agentes autónomos deciden
 qué hacer bajo reglas, recursos y consecuencias — sin historia
 predeterminada.
 
+Motor en Node.js (>= 18), sin dependencias externas: solo módulos `node:*`. El
+mundo es determinista: todo el azar sale de un único RNG con seed (`rng.js`), así
+que la misma seed y el mismo código reproducen la misma historia. Los LLM
+(DeepSeek para la cohorte V3, Ollama para la narrativa) son opcionales y nunca
+hacen falta para que la simulación avance.
+
 - [`docs/REPORT.md`](docs/REPORT.md) — informe de V1 (MVP): motor base, información limitada, primeras corridas.
 - [`docs/REPORT_V2.md`](docs/REPORT_V2.md) — informe de V2: progresión por clases, economía con sumideros reales, crimen/instituciones, partidas temporales, decisiones por instancia.
 - [`docs/REPORT_EXPERIMENT_A.md`](docs/REPORT_EXPERIMENT_A.md) — Experimento A: gremios como instituciones persistentes (tesorería, cuotas, encargos colectivos, guerra periódica, sucesión de liderazgo).
@@ -30,12 +36,53 @@ veredicto honesto (APOYADA / MIXTO / NO APOYADA / PARCIAL).
 | [12](docs/REPORT_STEP12_REGALAR_POR_NECESIDAD.md) | Regalar oro solo ante necesidad real | Apoyada |
 | [13](docs/REPORT_STEP13_VETO_DE_GREMIO.md) | El gremio no readmite a quien malversó | Apoyada / mixto |
 | [14](docs/REPORT_STEP14_APRENDER_DE_LAS_DERROTAS.md) | Aprender de las derrotas | Mixto |
-| [15](docs/REPORT_STEP15_COMPRA_DE_EQUIPO.md) | Compra de equipo por necesidad vivida | Mixto (en curso) |
+| [15](docs/REPORT_STEP15_COMPRA_DE_EQUIPO.md) | Compra de equipo por necesidad vivida | Mixto |
 
 **Metodología.** Diseño aprobado → implementación acotada a archivos
 permitidos → tests → corrida de 7200 ticks (300 días, 70 agentes) en 1–3
 seeds fijas → comparación contra el Step anterior → veredicto. Cada corrida
 queda en `data_runtime_step<N>_<seed>/` (ignorado por git).
+
+**Límite de esa comparación (descubierto en Step 15).** Cambiar el número de
+acciones candidatas corre la secuencia del RNG, así que dos mundos con la misma
+seed pero distinto código se separan en los primeros ticks. Comparar un mundo
+del Step N contra uno del Step N−1 no permite atribuir causalidad a una
+diferencia puntual (una muerte, un agente pobre). La revisión 4 del diseño del
+Step 15 ([`docs/DISENO_STEP15_COMPRA_DE_EQUIPO.md`](docs/DISENO_STEP15_COMPRA_DE_EQUIPO.md))
+propone un protocolo con control e intervención en el mismo código y réplicas
+pareadas.
+
+**Estado del Step 15.** Resultado mixto: las compras por necesidad se equiparon
+y las derrotas sin arma bajaron, pero dos salvaguardas (hambre y pobreza)
+fallaron según los criterios fijados antes de correr, y la investigación
+posterior no encontró evidencia de que las causaran las compras. La fórmula de
+valoración no se modificó.
+
+- **Fase A (implementada y validada):** instrumentación de solo observación
+  `weaponNeed` (ver abajo).
+- **Fase B (pendiente de autorización):** reserva de venta neutral respecto del
+  RNG, bandera control/intervención y experimento pareado de 10 seeds a 7200
+  ticks. Los criterios de aceptación revisados siguen en borrador.
+
+**`weaponNeed`.** En cada decisión de un agente sin arma equipada que recuerda
+alguna derrota de las últimas 168 h, `decisions.jsonl` registra, por arma, la
+necesidad (`need`: cuánto bajaría su probabilidad de perder contra los
+monstruos que recuerda, ponderado por lo reciente de cada derrota), el valor de compra
+(`value`), el stock y el precio, si la compra se ofreció, en qué puesto quedó
+entre las candidatas y la mejor puntuación. Sirve para separar falta de stock,
+falta de oro, compra ofrecida y compra no elegida
+(`node tools/auditoria_po/weapon_need_funnel.mjs <carpeta de corrida>`). Es solo
+observación: no consume RNG, no cambia decisiones y no entra en `state.json`,
+`recentDecisions`, eventos ni prompts LLM. No cubre las decisiones forzadas por
+supervivencia (están en el log, sin el campo) ni las invitaciones a grupo
+aceptadas (no se registran en `decisions.jsonl`).
+
+Validación de la Fase A: `npm test` 16/16, y una comprobación de equivalencia
+(R1) contra el commit anterior con 3 seeds y 420 ticks: `state.json`,
+`events.jsonl`, `llm_decisions.jsonl` y `llm_cohort.json` idénticos byte a byte,
+y `decisions.jsonl` idéntico al retirar el campo nuevo. R1 prueba que la
+instrumentación no altera la simulación; **no** es una prueba de eficacia del
+Step 15.
 
 **Step 10 y la narrativa.** El narrador (`src/engine/llm/narrator.js`) solo
 *interpreta* decisiones ya tomadas (divergencias Tipo A). Está apagado por
@@ -50,10 +97,14 @@ agentes "suenen" distinto **no** está demostrado como personalidad emergente
 npm run sim -- 7200              # 300 dias, corrida estandar de los Steps (default sin argumento: 168 ticks)
 npm run sim -- 7200 <seedLabel>  # otra seed (default sanctuary-v2)
 npm run sim -- 7200 --narrative  # activa el narrador Ollama (opcional, observacional)
-npm test                         # todos los tests de src/engine/tests (incluye reproducibilidad, ~10 s)
+SANCTUARY_RUNTIME_DIR="$(mktemp -d)" npm test   # todos los tests de src/engine/tests (incluye reproducibilidad, ~10 s)
 npm run server                   # dashboard en http://localhost:5177
 npm run reset                    # borra data_runtime/ y vuelve a empezar de cero
 ```
+
+Corre los tests con `SANCTUARY_RUNTIME_DIR` apuntando a un directorio
+temporal: algunos tests llaman a `tick()` dentro del mismo proceso y, sin esa
+variable, agregan registros a `data_runtime/decisions.jsonl`.
 
 `npm run sim` retoma el último estado guardado si existe; corre `npm run
 reset` primero para regenerar el mundo desde cero. Con narrativa OFF y sin
@@ -91,7 +142,8 @@ tools/auditoria_po/                  scripts de auditoria de solo lectura
 
 ## Cambiar el "cerebro" de los agentes
 
-`src/engine/decision.js` expone `decide(world, agent) -> { action, rationale }`.
+`src/engine/decision.js` expone `decide(world, agent) -> { action, rationale, observation }`
+(`observation` es solo para el log de decisiones; ver `weaponNeed`).
 Es la unica pieza que "decide" — el motor de mundo es autoritativo y solo
 ejecuta acciones que `actions.js` permite. Hoy es una politica determinista
 basada en utilidad. DeepSeek es opcional: si `DEEPSEEK_API_KEY` esta
