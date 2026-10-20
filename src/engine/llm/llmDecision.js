@@ -176,5 +176,6 @@ export async function decide(world, agent) {
     expectedOutcome: expectedOutcome(attempt.choice.type),
     source: "llm",
   };
-  return { action: attempt.choice, rationale };
+  // Step 15 rev. 4, Fase A: la observacion describe las candidatas que puntuo la politica determinista
+  return { action: attempt.choice, rationale, observation: det.observation };
 }

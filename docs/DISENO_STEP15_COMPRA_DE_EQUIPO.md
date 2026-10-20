@@ -39,6 +39,62 @@ El PO aprobó D1 a D5 y pidió aclarar dos detalles antes de autorizar la implem
 | 8.2 | Una ambigüedad encontrada en el criterio 1, sin modificarlo. |
 | 11 | Decisiones aprobadas y las tres que quedan pendientes. |
 
+## Revisión 4 (2026-10-20) — protocolo experimental revisado
+
+Dictamen del PO sobre las corridas de la revisión 3: **RESULTADO MIXTO**. La fórmula de
+valoración no cambia. Esta revisión cambia el **protocolo**, no la regla.
+
+**Hallazgo que la motiva.** `decision.js` consume un `world.rng()` por candidata puntuada y
+otro en el sorteo del 8 % cuando hay más de una. La reserva de la sección 4.6 quita la
+candidata `trade_sell` del arma cuando el agente tiene una sola, y con eso corre la secuencia
+del RNG. Las trayectorias del Step 14 y del Step 15 se separan en los ticks 16, 7 y 12 (mundos
+a, b y c), así que la comparación entre mundos sueltos no permite atribuir causalidad.
+
+**Corrección a la sección 7 y a `step15_limites.mjs`.** En el motor, las nueve localizaciones
+tienen mercado (`economy.initMarket`) y la compra se ofrece en cualquiera con más de 3 armas y
+oro suficiente (`actions.js`). `governance: "ninguna"` solo significa `settled: false`. La
+categoría "en lugar sin mercado" del reporte (291, 767 y 547 horas-agente) eran oportunidades
+disponibles o bloqueadas por stock. No se corrigió la herramienta existente; el embudo nuevo
+ya no usa esa categoría.
+
+### Fase A — instrumentación de solo observación (implementada, sin commit)
+
+- `observeWeaponNeed(world, agent, scored)` en `decision.js`: función pura. No llama a
+  `world.rng`, no escribe en el agente ni en el mundo y lee la lista que `decide()` ya puntuó.
+  Registra solo si la ranura de arma está vacía y hay al menos una derrota recordada en 168 h.
+- Campos por arma: `good, need, value, hasInInventory, market, settled, stock, price,
+  affordable, offered, buyScore, buyRank, nCandidates, topScore, inTop6`.
+- `decide()` devuelve `{ action, rationale, observation }`. `observation` **no** entra en
+  `rationale`, porque `rationale` también se guarda en `agent.recentDecisions` y, con eso, en
+  `state.json`. `world.js` pasa `observation` solo a `appendDecision`. `llmDecision.js` la
+  reenvía cuando el LLM elige.
+- No cubre dos tipos de turno, por razones distintas:
+  - **Decisiones forzadas por supervivencia** (`world.js`, rama de `survivalOverride`): sí
+    aparecen en `decisions.jsonl`, con el motivo "instinto de supervivencia", pero **sin**
+    `weaponNeed`, porque no pasan por `decide()`. En R1: 166, 414 y 216 registros.
+  - **Invitaciones a grupo aceptadas** (`world.js`, rama de `pendingInvites`): **no aparecen**
+    en `decisions.jsonl`; solo van a `recentDecisions` y el turno termina ahí. En R1: 236, 200 y
+    566 turnos, contados por los eventos `party_combat_*` con `partnerId`. Una invitación
+    rechazada no consume el turno: el agente decide en el mismo tick y esa decisión sí se
+    observa.
+- `need` y `value` se registran sin redondear (solo `buyScore` y `topScore` se redondean a 3
+  decimales), para que una necesidad mínima cerca del borde de la ventana no se registre como 0.
+- Verificación R1 (3 seeds, 420 ticks, contra `bf84795` exportado con `git archive`):
+  `state.json`, `events.jsonl`, `llm_decisions.jsonl` y `llm_cohort.json` idénticos byte a
+  byte; `decisions.jsonl` idéntico después de retirar el campo `weaponNeed`.
+- Embudo: `tools/auditoria_po/weapon_need_funnel.mjs`. Etapas en orden: E0 necesidad 0 · E1
+  sin entrada de mercado · E2 stock ≤ 3 · E3 sin oro para el precio × 1,05 · E4 ofrecida sin
+  valor · E5 ofrecida con valor y no elegida · E6 elegida con valor.
+
+### Fase B — pendiente de autorización
+
+Reserva neutral respecto del RNG (la candidata reservada se puntúa, se excluye después y el
+sorteo usa la longitud original), bandera `--condition=control|intervention` y 10 seeds
+pareadas: las tres originales y `sanctuary-v2-r15-04` a `-r15-10`. De las tres originales se
+conserva todo; de las siete nuevas, `state.json` y los resúmenes por corrida. Los criterios
+revisados (validez V1–V4, embudo, comportamiento B1–B10 y S6–S8, y su tabla de decisión) están
+en **borrador**: se fijan antes de cualquier corrida y no se adaptan después de ver resultados.
+
 ## Resumen
 
 - El agente no puede comprar bien porque **comprar no mira qué se compra**. El resto de la

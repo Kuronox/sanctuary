@@ -145,6 +145,46 @@ export function weaponPurchaseValue(world, agent, goodId) {
   return 2.5 * need * (1 - cost / agent.gold);
 }
 
+// Step 15 rev. 4, Fase A: observacion de la necesidad de arma, solo para
+// decisions.jsonl. Pura: no llama a world.rng, no escribe en el agente ni en
+// el mundo y no vuelve a puntuar: lee la lista `scored` que decide() ya ordeno.
+// Va en `observation`, nunca en `rationale`, porque rationale tambien se guarda
+// en agent.recentDecisions (state.json). Relevancia: ranura de arma vacia y al
+// menos una derrota recordada en la ventana (el mismo filtro de weaponGain).
+export function observeWeaponNeed(world, agent, scored) {
+  if (agent.equipment.weapon) return undefined;
+  const tick = world.time.tick;
+  if (!agent.memory.some((m) => m.family && m.rank && m.tags?.includes("derrota") && tick - m.tick <= DEFEAT_WINDOW)) return undefined;
+  const market = world.markets[agent.location];
+  const out = [];
+  for (const def of world.worldSeed.goods) {
+    if (def.category !== "equipo_arma") continue;
+    const stock = market ? market.stock[def.id] || 0 : 0;
+    const price = market ? economy.priceAt(world.worldSeed, world.markets, agent.location, def.id) : null;
+    const idx = scored.findIndex((s) => s.action.type === "trade_buy" && s.action.data?.good === def.id);
+    const round3 = (x) => Math.round(x * 1000) / 1000; // solo puntuaciones descriptivas
+    out.push({
+      good: def.id,
+      // sin redondear: scoreAction usa estos valores exactos; redondear volveria 0 una necesidad minima
+      need: prog.weaponGain(world.worldSeed, agent, tick, def.id),
+      value: market ? weaponPurchaseValue(world, agent, def.id) : 0,
+      hasInInventory: (agent.inventory[def.id] || 0) > 0,
+      market: !!market,
+      settled: !!market?.settled,
+      stock,
+      price,
+      affordable: price != null && agent.gold >= price * 1.05,
+      offered: idx >= 0,
+      buyScore: idx >= 0 ? round3(scored[idx].score) : null,
+      buyRank: idx >= 0 ? idx + 1 : null,
+      nCandidates: scored.length,
+      topScore: scored.length ? round3(scored[0].score) : null,
+      inTop6: idx >= 0 && idx < 6,
+    });
+  }
+  return out.length ? { weaponNeed: out } : undefined;
+}
+
 // Bono de utilidad para acciones que efectivamente avanzan la prueba de
 // clase EN CURSO del agente. Sin esto, "iniciar_prueba_clase" puntua alto
 // por ambicion pero luego nada empuja a craftear/cazar/curar/comerciar/
@@ -559,7 +599,7 @@ function scoreAction(world, agent, action) {
 export function decide(world, agent) {
   const candidates = listCandidateActions(world, agent);
   if (candidates.length === 0) {
-    return { action: { type: "rest" }, rationale: buildRationale(world, agent, [], null) };
+    return { action: { type: "rest" }, rationale: buildRationale(world, agent, [], null), observation: observeWeaponNeed(world, agent, []) };
   }
   const scored = candidates.map((a) => scoreAction(world, agent, a));
   scored.sort((a, b) => b.score - a.score);
@@ -590,7 +630,8 @@ export function decide(world, agent) {
     };
   }
 
-  return { action: chosen.action, rationale };
+  // Step 15 rev. 4, Fase A: despues de puntuar, ordenar y sortear; solo lectura.
+  return { action: chosen.action, rationale, observation: observeWeaponNeed(world, agent, scored) };
 }
 
 // Decision de aceptar/declinar una invitacion a grupo, resuelta cuando le

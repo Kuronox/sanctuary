@@ -371,7 +371,7 @@ export async function tick(world) {
     if (wasBusy) continue;
 
     const forced = survivalOverride(world, agent);
-    let action, rationale;
+    let action, rationale, observation;
     if (forced) {
       action = forced;
       const outcomes = { rest: "recuperar energia", eat: "reducir hambre", travel: "huir hacia una localizacion mas segura o con comida", use_potion: "recuperar salud de emergencia" };
@@ -386,13 +386,15 @@ export async function tick(world) {
       const d = agent.policy === "llm" ? await decideLlm(world, agent) : decide(world, agent);
       action = d.action;
       rationale = d.rationale;
+      observation = d.observation;
     }
 
     execute(world, agent, action);
 
     agent.recentDecisions.push({ tick: world.time.tick, ...rationale });
     if (agent.recentDecisions.length > 20) agent.recentDecisions.shift();
-    appendDecision({ agentId: agent.id, tick: world.time.tick, ...rationale });
+    // Step 15 rev. 4, Fase A: observation solo va al log, nunca a recentDecisions (state.json)
+    appendDecision({ agentId: agent.id, tick: world.time.tick, ...rationale, ...observation });
     // Step 10: narrativa observacional, OFF por defecto (world.narrative lo pone run.js
     // con --narrative; serializeWorld no lo persiste). El motor ya decidio y ejecuto.
     if (world.narrative && rationale.cf?.cfType === "A") await narrateTypeA(agent, { tick: world.time.tick, ...rationale }, world);
