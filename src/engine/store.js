@@ -3,12 +3,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const RUNTIME_DIR = path.resolve(__dirname, "../../data_runtime");
+// SANCTUARY_RUNTIME_DIR permite correr en otro directorio (tests de reproducibilidad) sin pisar data_runtime/
+export const RUNTIME_DIR = path.resolve(process.env.SANCTUARY_RUNTIME_DIR || path.resolve(__dirname, "../../data_runtime"));
 export const STATE_FILE = path.join(RUNTIME_DIR, "state.json");
 export const EVENTS_FILE = path.join(RUNTIME_DIR, "events.jsonl");
 export const DECISIONS_FILE = path.join(RUNTIME_DIR, "decisions.jsonl");
 export const LLM_DECISIONS_FILE = path.join(RUNTIME_DIR, "llm_decisions.jsonl");
 export const LLM_BUDGET_FILE = path.join(RUNTIME_DIR, "llm_budget.json");
+// Step 10: salida observacional del narrador. Fuera de state.json: nunca se hidrata ni la lee el motor.
+export const NARRATIVE_FILE = path.join(RUNTIME_DIR, "narrative.jsonl");
 
 export function ensureRuntimeDir() {
   if (!fs.existsSync(RUNTIME_DIR)) fs.mkdirSync(RUNTIME_DIR, { recursive: true });
@@ -49,6 +52,11 @@ export function appendLlmDecision(record) {
   fs.appendFileSync(LLM_DECISIONS_FILE, JSON.stringify(record) + "\n", "utf-8");
 }
 
+export function appendNarrative(record) {
+  ensureRuntimeDir();
+  fs.appendFileSync(NARRATIVE_FILE, JSON.stringify(record) + "\n", "utf-8");
+}
+
 export function loadLlmBudget() {
   ensureRuntimeDir();
   if (!fs.existsSync(LLM_BUDGET_FILE)) return null;
@@ -69,7 +77,7 @@ export function readJsonl(file, limit) {
 
 export function resetRuntime() {
   ensureRuntimeDir();
-  for (const f of [STATE_FILE, EVENTS_FILE, DECISIONS_FILE, LLM_DECISIONS_FILE, LLM_BUDGET_FILE]) {
+  for (const f of [STATE_FILE, EVENTS_FILE, DECISIONS_FILE, LLM_DECISIONS_FILE, LLM_BUDGET_FILE, NARRATIVE_FILE]) {
     if (fs.existsSync(f)) fs.unlinkSync(f);
   }
 }

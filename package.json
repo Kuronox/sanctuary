@@ -8,6 +8,7 @@
     "sim": "node src/sim/run.js",
     "server": "node src/server/server.js",
     "reset": "node src/sim/reset.js",
+    "test": "node --test \"src/engine/tests/*.test.js\"",
     "test:embezzle": "node src/engine/tests/embezzlement_friction.test.js",
     "test:craft": "node src/engine/tests/craft_instance.test.js",
     "test:maintenance": "node src/engine/tests/equipment_maintenance.test.js"

@@ -6,6 +6,12 @@ import readline from "node:readline";
 
 const [runDir = "data_runtime", ...wanted] = process.argv.slice(2);
 const state = JSON.parse(fs.readFileSync(path.join(runDir, "state.json"), "utf-8"));
+const narrativeFile = path.join(runDir, "narrative.jsonl");
+const narrativeByAgent = {};
+if (fs.existsSync(narrativeFile)) for (const l of fs.readFileSync(narrativeFile, "utf-8").split("\n").filter(Boolean)) {
+  const n = JSON.parse(l);
+  (narrativeByAgent[n.agentId] ||= []).push(n);
+}
 const agents = state.agents;
 const clean = (s) => String(s).replaceAll(" (sujeto de control)", "");
 const nameOf = (id) => (agents[id] ? clean(agents[id].name) : id);
@@ -222,9 +228,10 @@ for (const { agent: a, lives, lastDay } of book.values()) {
     for (const [text, delta] of [...scars].slice(0, 8)) out.push(`- ${clean(text)} (${delta < 0 ? "herida" : "vínculo"})`);
     out.push("");
   }
-  if (a.narrative?.length) {
+  const voice = narrativeByAgent[a.id] || a.narrative || []; // a.narrative: corridas previas a la separacion
+  if (voice.length) {
     out.push("**En sus propias palabras** (frases generadas por el narrador):", "");
-    for (const n of a.narrative) out.push(`- Día ${Math.floor(n.tick / 24) + 1}: «${n.text}»`);
+    for (const n of voice) out.push(`- Día ${Math.floor(n.tick / 24) + 1}: «${n.text}»`);
     out.push("");
   }
   const bans = Object.values(state.guilds).filter((g) => g.bannedIds?.includes(a.id)).map((g) => g.name);

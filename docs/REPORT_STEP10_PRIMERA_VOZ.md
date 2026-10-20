@@ -25,6 +25,8 @@ de integración LLM local (Ollama) como capa de interpretación.
 ### Archivos nuevos
 - **`src/engine/llm/ollamaClient.js`**: cliente HTTP a `localhost:11434/api/generate`.
   Timeout 8s, devuelve `null` en error — la simulación nunca se rompe.
+  *(Corrección posterior: el código de la corrida original tenía 30s; se alineó
+  a 8s en el hardening, ver §11. No afecta los datos: 0 timeouts, ~600ms/llamada.)*
 - **`src/engine/llm/narrator.js`**: construye el prompt con datos deterministas
   (personalidad, acción real, acción contrafactual, dangerPenalty, ubicación,
   clase, nivel) e instrucción de responder en español en primera persona.
@@ -148,6 +150,33 @@ No es EMERGIÓ: 6 casos no son suficientes.
 - Mejorar el prompt para forzar español más natural.
 - Si el CHR sube con más seeds/steps, evaluar si `await` directo sigue siendo
   aceptable o hay que pasar a cola async real.
+
+## 11. Hardening posterior (consolidación)
+
+Problema detectado después del cierre: `narrative[]` vivía dentro del agente y
+terminaba en `state.json`, así que el mismo seed podía persistir un estado
+distinto según Ollama estuviera disponible o según lo que respondiera el modelo.
+Ningún mecanismo lo leía, pero el estado persistido dejaba de ser reproducible.
+
+Cambios:
+- Narrativa **OFF por defecto**. Se activa con `npm run sim -- <ticks> --narrative`
+  (o `SANCTUARY_NARRATIVE=1`). Con OFF no hay llamadas a Ollama ni `await` extra.
+- La salida va a `data_runtime/narrative.jsonl` (`{ agentId, tick, text, trigger }`),
+  fuera de `state.json`. No se hidrata ni la lee ningún mecanismo causal.
+  `agent.narrative` se eliminó del schema; `chronicle.mjs` lee el jsonl (y
+  cae a `agent.narrative` para corridas viejas como `data_runtime_step10_a/`).
+- Timeout de Ollama: 8s (`OLLAMA_TIMEOUT_MS`), timer limpiado al terminar.
+- `narrative_isolation.test.js` corre la simulación real: dos veces desde cero,
+  y luego cuatro veces (OFF, OFF, ON, ON con Ollama caído) reanudando un mismo
+  fixture con arbitraje atractivo + peligro conocido en cada destino, que
+  produce cientos de Type A sin depender de la trayectoria de ningún Step.
+  Verifica que `state.json`, `decisions.jsonl` y `events.jsonl` completos sean
+  idénticos byte a byte.
+
+Matiz sobre §7–8: el prompt **sí** incluye los rasgos numéricos del agente,
+así que la diferencia de voz puede ser el modelo leyendo esos números, no
+una propiedad emergente. El veredicto sigue PARCIAL y este Step no es
+evidencia de "personalidad emergente".
 
 ---
 

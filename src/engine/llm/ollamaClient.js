@@ -3,10 +3,14 @@
 
 const OLLAMA_URL = "http://localhost:11434/api/generate";
 
-export async function ollamaGenerate(model, prompt, timeoutMs = 30000) {
-  const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error("timeout")), timeoutMs)
-  );
+// Timeout corto: la narrativa es observacional, la simulacion no espera al modelo.
+export const OLLAMA_TIMEOUT_MS = 8000;
+
+export async function ollamaGenerate(model, prompt, timeoutMs = OLLAMA_TIMEOUT_MS) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
+  });
   try {
     const res = await Promise.race([
       fetch(OLLAMA_URL, {
@@ -25,5 +29,7 @@ export async function ollamaGenerate(model, prompt, timeoutMs = 30000) {
   } catch (err) {
     console.warn(`[ollama] ${err.message}`);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }

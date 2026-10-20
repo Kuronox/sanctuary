@@ -13,7 +13,11 @@ import { hasApiKey } from "../engine/llm/deepseekClient.js";
 // Step 8: label de seed opcional por CLI (node src/sim/run.js <ticks> <seedLabel>),
 // "sanctuary-v2" como default — sin esto, correr una poblacion distinta para
 // comparar entre seeds exigia editar y revertir esta constante a mano.
-const SEED_LABEL = process.argv[3] || "sanctuary-v2";
+// Step 10: --narrative (o SANCTUARY_NARRATIVE=1) activa el narrador Ollama. OFF por
+// defecto: sin el flag no hay llamadas ni awaits extra y state.json depende solo del seed.
+const POSITIONAL = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const NARRATIVE = process.argv.includes("--narrative") || process.env.SANCTUARY_NARRATIVE === "1";
+const SEED_LABEL = POSITIONAL[1] || "sanctuary-v2";
 const LLM_COHORT_SIZE = 5;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -111,7 +115,7 @@ function summarize(world) {
 }
 
 async function main() {
-  const ticksArg = Number(process.argv[2]) || 24 * 7;
+  const ticksArg = Number(POSITIONAL[0]) || 24 * 7;
   ensureRuntimeDir();
 
   if (!hasApiKey()) {
@@ -128,6 +132,8 @@ async function main() {
     world = buildInitialWorld();
   }
   attachEventSink(world);
+  world.narrative = NARRATIVE;
+  if (NARRATIVE) console.log(`Narrativa ON (observacional) -> ${RUNTIME_DIR}/narrative.jsonl`);
 
   console.log(`Avanzando ${ticksArg} ticks (horas de juego)...`);
   for (let i = 0; i < ticksArg; i++) {
@@ -143,7 +149,7 @@ async function main() {
   summarize(world);
   const budgetSummary = llmBudget.getSummary();
   console.log(`\nPresupuesto LLM: $${budgetSummary.cumulativeCostUsd.toFixed(4)} acumulado (${budgetSummary.successfulCalls} llamadas ok, ${budgetSummary.fallbackCalls} fallback de ${budgetSummary.totalCalls} intentos totales).`);
-  console.log(`\nEstado guardado en data_runtime/state.json. Eventos en data_runtime/events.jsonl.`);
+  console.log(`\nEstado guardado en ${RUNTIME_DIR}/state.json. Eventos en events.jsonl.`);
 }
 
 main();

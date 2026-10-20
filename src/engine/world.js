@@ -393,8 +393,9 @@ export async function tick(world) {
     agent.recentDecisions.push({ tick: world.time.tick, ...rationale });
     if (agent.recentDecisions.length > 20) agent.recentDecisions.shift();
     appendDecision({ agentId: agent.id, tick: world.time.tick, ...rationale });
-    // Step 10: await post-decision — el motor ya decidio; solo escribe en narrative[]
-    if (rationale.cf?.cfType === "A") await narrateTypeA(agent, { tick: world.time.tick, ...rationale }, world);
+    // Step 10: narrativa observacional, OFF por defecto (world.narrative lo pone run.js
+    // con --narrative; serializeWorld no lo persiste). El motor ya decidio y ejecuto.
+    if (world.narrative && rationale.cf?.cfType === "A") await narrateTypeA(agent, { tick: world.time.tick, ...rationale }, world);
   }
 
   return world;

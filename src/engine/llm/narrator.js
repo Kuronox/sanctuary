@@ -1,11 +1,13 @@
 // Genera una racionalizacion narrativa cuando ocurre una divergencia Tipo A.
-// Solo lee estado determinista; nunca escribe en campos que el motor consulte.
+// Solo lee estado determinista; nunca escribe en el agente ni en el mundo:
+// la salida va a narrative.jsonl (fuera de state.json, nunca hidratada).
 
 import { ollamaGenerate } from "./ollamaClient.js";
+import { appendNarrative } from "../store.js";
 
 const MODEL = "mistral:7b-instruct-q4_K_M";
 
-export async function narrateTypeA(agent, decision, world, _generate = ollamaGenerate) {
+export async function narrateTypeA(agent, decision, world, _generate = ollamaGenerate, _sink = appendNarrative) {
   try {
     const p = agent.personality;
     const cf = decision.cf;
@@ -30,9 +32,7 @@ export async function narrateTypeA(agent, decision, world, _generate = ollamaGen
     const clean = text.replace(/^["'«]|["'»]$/g, "").trim();
     if (!clean) return;
 
-    agent.narrative.push({ tick: world.time.tick, text: clean, trigger: "typeA" });
-    // Acotado igual que knowledge[] — sin esto crece ilimitado en corridas largas
-    if (agent.narrative.length > 60) agent.narrative.shift();
+    _sink({ agentId: agent.id, tick: world.time.tick, text: clean, trigger: "typeA" });
   } catch {
     // silencio — la simulacion nunca debe romperse por la narrativa
   }
