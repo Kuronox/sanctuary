@@ -92,6 +92,56 @@ export function underleveledPenalty(agent, minBaseLevel) {
   return gap > 0 ? gap * 1.5 : 0;
 }
 
+// ---- Step 15: valor de un arma segun las derrotas que el agente recuerda ----
+// Funciones puras, compartidas por decision.js (valorar la compra) y
+// actions.js (reservar el arma que se necesita). No usan el generador de azar.
+
+// Probabilidad exacta de perder una pelea individual, enumerando las 63
+// combinaciones de azar de resolveSoloFight() (actions.js): agente -3..+5,
+// monstruo -2..+4. Repite esa regla a proposito; si el combate cambia, el test
+// de concordancia de equipment_purchase.test.js debe fallar.
+export function soloLossProbability(power, monsterDef, agent) {
+  const base = power - underleveledPenalty(agent, monsterDef.minBaseLevel);
+  let losses = 0;
+  for (let a = -3; a <= 5; a++) {
+    for (let m = -2; m <= 4; m++) {
+      let p = base + a;
+      if (monsterDef.partyRecommended) p *= 0.55;
+      if (p < monsterDef.power + m) losses++;
+    }
+  }
+  return losses / 63;
+}
+
+// Misma ventana que la memoria de derrotas del Step 14 (DEFEAT_WINDOW en
+// decision.js). Esta duplicada porque decision.js importa este archivo y no
+// al reves; el caso U9 de equipment_purchase.test.js comprueba que coinciden.
+const DEFEAT_MEMORY_WINDOW = 168;
+
+// Mejora por arma, en [0,1]: por cada derrota individual recordada en la
+// ventana, cuanto bajaria la probabilidad de perder contra ese mismo monstruo
+// llevando `weaponItemId`, pesado por lo reciente del recuerdo. No mira el
+// inventario ni lo que el agente lleva equipado.
+export function weaponGain(worldSeed, agent, tick, weaponItemId) {
+  const weaponDef = worldSeed.goods.find((g) => g.id === weaponItemId);
+  if (!weaponDef || !weaponDef.combatPowerBonus) return 0;
+  const unarmed = { ...agent, equipment: { ...agent.equipment, weapon: null } };
+  const armed = { ...agent, equipment: { ...agent.equipment, weapon: { itemId: weaponItemId, durability: 1 } } };
+  const powerWithout = effectiveCombatPower(worldSeed, unarmed);
+  const powerWith = effectiveCombatPower(worldSeed, armed);
+  let total = 0;
+  for (const m of agent.memory) {
+    if (!m.family || !m.rank || !m.tags?.includes("derrota")) continue;
+    const age = tick - m.tick;
+    if (age > DEFEAT_MEMORY_WINDOW) continue;
+    const monster = worldSeed.monsters[m.family]?.[m.rank];
+    if (!monster) continue;
+    const gain = soloLossProbability(powerWithout, monster, agent) - soloLossProbability(powerWith, monster, agent);
+    total += (1 - age / DEFEAT_MEMORY_WINDOW) * gain;
+  }
+  return Math.min(1, total);
+}
+
 function ensureCounters(agent) {
   if (!agent.progression.counters) {
     agent.progression.counters = { killsComun: 0, killsElite: 0, killsJefe: 0, crafts: 0, trades: 0, heals: 0, stealSuccess: 0, visits: [] };

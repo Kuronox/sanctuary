@@ -428,7 +428,13 @@ export function listCandidateActions(world, agent) {
     if ((agent.inventory[good.id] || 0) > 0 && good.category !== "equipo_arma" && good.category !== "equipo_armadura" && good.category !== "equipo_herramienta") {
       actions.push({ type: "trade_sell", data: { good: good.id, qty: agent.inventory[good.id] } });
     } else if ((agent.inventory[good.id] || 0) > 0 && agent.equipment.weapon?.itemId !== good.id && agent.equipment.armor?.itemId !== good.id && agent.equipment.tool?.itemId !== good.id) {
-      actions.push({ type: "trade_sell", data: { good: good.id, qty: agent.inventory[good.id] } });
+      let qty = agent.inventory[good.id];
+      // Step 15: con la ranura de arma vacia y una mejora por arma mayor que 0,
+      // se reserva una unidad: el agente no revende el arma que necesita antes
+      // de equiparla. La reserva se libera sola al equiparla o cuando los
+      // recuerdos de derrota vencen. No afecta a ningun otro bien.
+      if (good.category === "equipo_arma" && !agent.equipment.weapon && prog.weaponGain(world.worldSeed, agent, world.time.tick, good.id) > 0) qty -= 1;
+      if (qty > 0) actions.push({ type: "trade_sell", data: { good: good.id, qty } });
     }
     const stock = market.stock[good.id] || 0;
     const price = economy.priceAt(world.worldSeed, world.markets, agent.location, good.id);

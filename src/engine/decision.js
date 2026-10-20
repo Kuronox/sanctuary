@@ -125,6 +125,26 @@ export function defeatPenalty(agent, family, rank, tick) {
   return Math.min(4, signal * (1 - 0.5 * agent.personality.riskTolerance));
 }
 
+// Step 15: valor de comprar un arma segun la necesidad vivida. Solo aplica a
+// armas, con la ranura vacia y sin otra en el inventario. La necesidad es la
+// mejora por arma (prog.weaponGain). La asequibilidad usa el mismo techo de
+// coste que listCandidateActions() (precio x 1.05) y exige que queden al
+// menos 15 de oro, el umbral de presion economica del Step 5. El tope de 2.5
+// es la puntuacion de equip_item: comprar lo que se necesita no vale mas que
+// equiparlo. Con necesidad 0 devuelve 0 y la compra puntua como antes.
+export const WEAPON_NEED_REASON = "necesita un arma: recuerda derrotas que un arma habria evitado";
+const PURCHASE_GOLD_RESERVE = 15;
+export function weaponPurchaseValue(world, agent, goodId) {
+  const def = economy.goodDef(world.worldSeed, goodId);
+  if (!def || def.category !== "equipo_arma") return 0;
+  if (agent.equipment.weapon || (agent.inventory[goodId] || 0) > 0) return 0;
+  const need = prog.weaponGain(world.worldSeed, agent, world.time.tick, goodId);
+  if (need <= 0) return 0;
+  const cost = economy.priceAt(world.worldSeed, world.markets, agent.location, goodId) * 1.05;
+  if (agent.gold - cost < PURCHASE_GOLD_RESERVE) return 0;
+  return 2.5 * need * (1 - cost / agent.gold);
+}
+
 // Bono de utilidad para acciones que efectivamente avanzan la prueba de
 // clase EN CURSO del agente. Sin esto, "iniciar_prueba_clase" puntua alto
 // por ambicion pero luego nada empuja a craftear/cazar/curar/comerciar/
@@ -292,9 +312,15 @@ function scoreAction(world, agent, action) {
       score += 1.8;
       reasons.push("equipo desgastado, riesgo de que se rompa");
       break;
-    case "trade_buy":
+    case "trade_buy": {
       score += p.greed * 0.4 + goalWeight(agent, "riqueza") * 0.3;
+      const needValue = weaponPurchaseValue(world, agent, action.data.good);
+      if (needValue > 0) {
+        score += needValue;
+        reasons.push(WEAPON_NEED_REASON);
+      }
       break;
+    }
     case "trade_sell": {
       score += 1.3 + p.greed * 0.5;
       const known = knownPricesFor(agent, action.data.good).filter((k) => k.data.locationId !== agent.location);
